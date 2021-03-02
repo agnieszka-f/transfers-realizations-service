@@ -1,6 +1,9 @@
 package com.kodilla.transfersrealizationservice.service;
 
 import com.kodilla.commons.TransferMessage;
+import com.kodilla.commons.UpdateBalancesMessage;
+import com.kodilla.transfersrealizationservice.connector.AccountProvider;
+import com.kodilla.transfersrealizationservice.connector.request.AccountDto;
 import com.kodilla.transfersrealizationservice.domain.TransferDao;
 import com.kodilla.transfersrealizationservice.repository.TransferRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -15,9 +18,11 @@ import java.io.IOException;
 public class TransferListener {
 
     private final TransferRepository transferRepository;
+    private final AccountProvider accountProvider;
 
-    public TransferListener(TransferRepository transferRepository) {
+    public TransferListener(TransferRepository transferRepository, AccountProvider accountProvider) {
         this.transferRepository = transferRepository;
+        this.accountProvider = accountProvider;
     }
 
 
@@ -33,6 +38,16 @@ public class TransferListener {
 
         transferRepository.save(transferDao);
 
+    }
+    @KafkaListener(topics = "updateBalance")
+    public void consumeUpdateBalance(@Payload UpdateBalancesMessage updateBalance) throws IOException {
+        log.info("Consumed updateBalanceMessage: {}", updateBalance);
+
+        AccountDto accountDto = new AccountDto();
+        accountDto.setNrb(updateBalance.getUpdateBalances().getNrb());
+        accountDto.setAvailableFunds(updateBalance.getUpdateBalances().getBalance());
+
+        accountProvider.update(accountDto);
     }
 
 }
